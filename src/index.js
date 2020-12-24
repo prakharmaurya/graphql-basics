@@ -56,6 +56,16 @@ const typeDefs = gql`
     me(id: String): User
     post(id: String): Post
   }
+  type Mutation {
+    createUser(name: String!, email: String!, age: Int): User!
+    createPost(
+      title: String!
+      body: String!
+      published: Boolean!
+      author: ID!
+    ): Post!
+    createComment(user: ID!, post: ID!, body: String!): Comment!
+  }
   type User {
     id: ID!
     name: String!
@@ -128,6 +138,54 @@ const resolvers = {
       })
     },
   },
+  Mutation: {
+    createUser(parent, args, ctx, info) {
+      const emailTaken = users.some((u) => u.email === args.email)
+      if (emailTaken) {
+        return new Error('Email Taken')
+      }
+      const user = {
+        id: Date.now(),
+        email: args.email,
+        name: args.name,
+        age: args.age,
+      }
+      users.push(user)
+      return user
+    },
+    createPost(parent, args, ctx, info) {
+      const userExists = users.find((u) => u.id === args.author)
+      if (!userExists) {
+        return new Error('This user does not exist')
+      }
+      const post = {
+        id: 'p-' + Date.now(),
+        title: args.title,
+        body: args.body,
+        published: args.published,
+        author: userExists.id,
+      }
+      posts.push(post)
+      return post
+    },
+    createComment(parent, args, ctx, info) {
+      const userExists = users.find((u) => u.id === args.user)
+      const postExists = posts.find((p) => p.id === args.post)
+
+      if (!userExists || !postExists) {
+        return new Error('Post or user DNE')
+      }
+
+      const comment = {
+        user: args.user,
+        post: args.post,
+        body: args.body,
+      }
+
+      commentsArr.push(comment)
+      return comment
+    },
+  },
   Post: {
     author(parent, args, ctx, info) {
       return users.find((user) => {
@@ -154,14 +212,14 @@ const resolvers = {
   },
   Comment: {
     user(parent, args, ctx, info) {
-      return users.filter((u) => {
+      return users.find((u) => {
         return parent.user === u.id
-      })[0]
+      })
     },
     post(parent, args, ctx, info) {
-      return posts.filter((p) => {
+      return posts.find((p) => {
         return parent.post === p.id
-      })[0]
+      })
     },
   },
 }
