@@ -57,15 +57,30 @@ const typeDefs = gql`
     post(id: String): Post
   }
   type Mutation {
-    createUser(name: String!, email: String!, age: Int): User!
-    createPost(
-      title: String!
-      body: String!
-      published: Boolean!
-      author: ID!
-    ): Post!
-    createComment(user: ID!, post: ID!, body: String!): Comment!
+    createUser(data: CreateUserInput): User!
+    createPost(data: CreatePostInput): Post!
+    createComment(data: CreateCommentInput): Comment!
   }
+
+  input CreateUserInput {
+    name: String!
+    email: String!
+    age: Int
+  }
+
+  input CreatePostInput {
+    title: String!
+    body: String!
+    published: Boolean!
+    author: ID!
+  }
+
+  input CreateCommentInput {
+    user: ID!
+    post: ID!
+    body: String!
+  }
+
   type User {
     id: ID!
     name: String!
@@ -88,7 +103,6 @@ const typeDefs = gql`
     body: String!
   }
 `
-
 // Provide resolver functions for your schema fields
 const resolvers = {
   Query: {
@@ -139,47 +153,47 @@ const resolvers = {
     },
   },
   Mutation: {
-    createUser(parent, args, ctx, info) {
-      const emailTaken = users.some((u) => u.email === args.email)
+    createUser(parent, { data }, ctx, info) {
+      const emailTaken = users.some((u) => u.email === data.email)
       if (emailTaken) {
         return new Error('Email Taken')
       }
       const user = {
         id: Date.now(),
-        email: args.email,
-        name: args.name,
-        age: args.age,
+        email: data.email,
+        name: data.name,
+        age: data.age,
       }
       users.push(user)
       return user
     },
-    createPost(parent, args, ctx, info) {
-      const userExists = users.find((u) => u.id === args.author)
+    createPost(parent, { data }, ctx, info) {
+      const userExists = users.find((u) => u.id === data.author)
       if (!userExists) {
         return new Error('This user does not exist')
       }
       const post = {
         id: 'p-' + Date.now(),
-        title: args.title,
-        body: args.body,
-        published: args.published,
+        title: data.title,
+        body: data.body,
+        published: data.published,
         author: userExists.id,
       }
       posts.push(post)
       return post
     },
-    createComment(parent, args, ctx, info) {
-      const userExists = users.find((u) => u.id === args.user)
-      const postExists = posts.find((p) => p.id === args.post)
+    createComment(parent, { data }, ctx, info) {
+      const userExists = users.find((u) => u.id === data.user)
+      const postExists = posts.find((p) => p.id === data.post)
 
       if (!userExists || !postExists) {
         return new Error('Post or user DNE')
       }
 
       const comment = {
-        user: args.user,
-        post: args.post,
-        body: args.body,
+        user: data.user,
+        post: data.post,
+        body: data.body,
       }
 
       commentsArr.push(comment)
